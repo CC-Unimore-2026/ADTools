@@ -1,0 +1,58 @@
+---
+- hosts: all
+  become: false
+  vars:
+    system_protocol: ructf_http
+    packmate_login: unimore
+    # Ubuntu 20.04 LTS: focal
+    # Ubuntu 22.04 LTS: jammy
+    # Ubuntu 24.04 LTS: 
+    ubuntu_version: jammy
+
+  pre_tasks:
+    - name: Set modules to default if not defined
+      set_fact:
+        modules: ["all"]
+      when: modules is not defined
+
+    - name: Fail if any module is invalid
+      fail:
+        msg: "Invalid module in {{ modules }}. Allowed: all, s4dfarm, packmate, dashboard, wisscon, kickstarterpy"
+      when: modules | difference(["all", "common", "s4dfarm", "packmate", "threesome","dashboard", "wisscon", "kickstarterpy", "git_deploy"]) | length > 0
+
+  tasks:
+
+    - name: Install base dependencies
+      import_tasks: tasks/common.yml
+      when: modules is defined and ("all" in modules or "common" in modules)
+
+    - name: Include KickStarterPy tasks
+      import_tasks: tasks/kickstarterpy.yml
+      when: modules is defined and ("kickstarterpy" in modules or "all" in modules)
+
+    - name: Include S4DFarm tasks
+      import_tasks: tasks/s4dfarm.yml
+      when: modules is defined and ("s4dfarm" in modules or "all" in modules)
+
+    - name: Include Packmate tasks
+      import_tasks: tasks/packmate.yml
+      when: modules is defined and ("packmate" in modules or "all" in modules)
+
+    - name: Include Threesome tasks
+      import_tasks: tasks/threesome.yml
+      when: modules is defined and ("threesome" in modules or "all" in modules) 
+
+    - name: Include Dashboard tasks
+      import_tasks: tasks/dashboard.yml
+      when: modules is defined and ("dashboard" in modules or "all" in modules)
+
+    - name: Include Wisscon tasks
+      import_tasks: tasks/wisscon.yml
+      when: modules is defined and ("wisscon" in modules or "all" in modules)
+
+    - name: Include Git deploy tasks
+      import_tasks: tasks/git_deploy.yml
+      when: modules is defined and ("git_deploy" in modules)
+
+
+

@@ -1,0 +1,17 @@
+- name: download wisscon
+  ansible.builtin.git:
+    repo: 'https://{{token}}:{{token}}@github.com/HackingMoRe/wisscon.git'
+    dest: '/root/wisscon'
+    version: '2d1bafb330f7a179f0ad11933cd423209f9bc87b'
+    force: yes
+
+- name: Ensure app.py is executable
+  ansible.builtin.file:
+    path: /root/wisscon/client/client-wg-config.sh
+    mode: '0755'
+
+- name: Run wisscon to establish site-to-site configuration
+  ansible.builtin.shell: |
+    ./client-wg-config.sh {{exploit_vm_endpoint}} {{exploit_vm_pubkey}} {{vulnbox_privkey}} {{game_interface}}
+  args:
+    chdir: /root/wisscon/client

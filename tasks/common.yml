@@ -1,0 +1,64 @@
+- name: install dependencies
+  apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-watchdog 
+      - python3-http-parser 
+      - python3-pymongo 
+      - nftables
+      - wireguard
+    update_cache: true
+
+- name: check if Docker is installed
+  shell: command -v docker
+  register: docker_exists
+  ignore_errors: yes
+
+- name: install Docker prerequisites
+  apt:
+    pkg:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
+      - python3-pip
+      - virtualenv
+      - python3-setuptools
+    state: latest
+    update_cache: true
+  when: docker_exists is failed
+
+- name: add Docker GPG apt Key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+  when: docker_exists is failed
+
+- name: add Docker Repository
+  apt_repository:
+    repo: "deb https://download.docker.com/linux/ubuntu {{ ubuntu_version }} stable"
+    state: present
+  when: docker_exists is failed
+
+- name: update apt and install docker-ce
+  apt:
+    name:
+      - docker-ce
+      - docker-compose-plugin
+    state: latest
+    update_cache: true
+  when: docker_exists is failed
+
+- name: add SSH keys
+  ansible.posix.authorized_key:
+    exclusive: false
+    user: root
+    state: present
+    key: "{{ lookup('file', './ssh_keys') }}"
+
+- name: change root password
+  user:
+    name: root
+    update_password: always
+    password: "{{ root_password | password_hash('sha512') }}"

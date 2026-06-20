@@ -1,0 +1,8 @@
+- name: download threesome
+  ansible.builtin.git:
+    repo: 'https://{{token}}:{{token}}@github.com/HackingMoRe/threesome.git'
+    dest: '/root/threesome'
+    version: '2d8adaafab8c8ae562f5dad3108216c5ce4db01a'
+    force: yes
+- name: Setup threesome
+  command:  bash /root/threesome/setup.sh {{ game_interface }}

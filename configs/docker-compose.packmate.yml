@@ -1,0 +1,47 @@
+services:
+  packmate: # port = 65000
+    environment:
+      DB_PASSWORD: ${PACKMATE_DB_PASSWORD:-K604YnL3G1hp2RDkCZNjGpxbyNpNHTRb}
+      INTERFACE: ${PACKMATE_INTERFACE:-}
+      LOCAL_IP: ${PACKMATE_LOCAL_IP}
+      MODE: ${PACKMATE_MODE:-LIVE}
+      PCAP_FILE: ${PACKMATE_PCAP_FILE:-}
+      WEB_LOGIN: ${PACKMATE_WEB_LOGIN:-BinaryBears}
+      WEB_PASSWORD: ${PACKMATE_WEB_PASSWORD:-123456}
+      OLD_STREAMS_CLEANUP_ENABLED: ${PACKMATE_OLD_STREAMS_CLEANUP_ENABLED:-false}
+      OLD_STREAMS_CLEANUP_INTERVAL: ${PACKMATE_OLD_STREAMS_CLEANUP_INTERVAL:-5}
+      OLD_STREAMS_CLEANUP_THRESHOLD: ${PACKMATE_OLD_STREAMS_CLEANUP_THRESHOLD:-240}
+    env_file:
+      - .env
+    container_name: packmate-app
+    # build:
+    #   context: .
+    #   dockerfile: docker/Dockerfile_app
+    network_mode: "host"
+    # image: registry.gitlab.com/packmate/packmate:${BUILD_TAG:-latest}
+    image: registry.gitlab.com/packmate/packmate
+    volumes:
+      - "./pcaps/:/app/pcaps/:ro"
+      - "./rsa_keys/:/app/rsa_keys/:ro"
+    depends_on:
+      db:
+        condition: service_healthy
+  db: # port = 65001
+    container_name: packmate-db
+    environment:
+      POSTGRES_USER: packmate
+      POSTGRES_PASSWORD: ${PACKMATE_DB_PASSWORD:-K604YnL3G1hp2RDkCZNjGpxbyNpNHTRb}
+      POSTGRES_DB: packmate
+    env_file:
+      - .env
+    volumes:
+    - "./data/postgres_data:/var/lib/postgresql/data"
+    - "./docker/postgresql.conf:/tmp/postgresql.conf:ro"
+    - "./docker/update_db_config.sh:/docker-entrypoint-initdb.d/_update_db_config.sh:ro"
+    network_mode: "host"
+    image: postgres:15.2
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U packmate -p 65001" ]
+      interval: 2s
+      timeout: 5s
+      retries: 15

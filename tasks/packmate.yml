@@ -1,0 +1,58 @@
+- name: download packmate
+  ansible.builtin.git:
+    repo: 'https://gitlab.com/packmate/Packmate.git'
+    dest: '/root/packmate'
+    force: yes
+    recursive: yes
+    version: "7bc02dd91fdedac42164f572994d72e07ca33b34"
+    
+- name: copy template packmate docker-compose
+  copy:
+    src: ./configs/docker-compose.packmate.yml
+    dest: /root/packmate/docker-compose.yml
+
+- name: install Packmate configuration
+  copy:
+    src: ./configs/packmate.template.env
+    dest: /root/packmate/.env
+
+- name: add packmate local ip
+  ansible.builtin.lineinfile:
+    path: /root/packmate/.env
+    search_string: "PACKMATE_LOCAL_IP="
+    line: "PACKMATE_LOCAL_IP={{ vulnbox_ip }}"
+
+- name: add packmate web password
+  ansible.builtin.lineinfile:
+    path: /root/packmate/.env
+    search_string: "PACKMATE_WEB_PASSWORD="
+    line: "PACKMATE_WEB_PASSWORD={{ packmate_password }}"
+
+- name: add packmate login
+  ansible.builtin.lineinfile:
+    path: /root/packmate/.env
+    search_string: "PACKMATE_WEB_LOGIN="
+    line: "PACKMATE_WEB_LOGIN={{ packmate_login }}"
+
+- name: add packmate interface
+  ansible.builtin.lineinfile:
+    path: /root/packmate/.env
+    search_string: "PACKMATE_INTERFACE="
+    line: "PACKMATE_INTERFACE={{ game_interface }}"
+
+- name: run packmate
+  community.docker.docker_compose_v2:
+    project_src: '/root/packmate'
+    build: 'always'
+
+- name: copy packmate rm_old_packets.sh
+  copy:
+    src: ./configs/rm_old_packets.sh
+    dest: /root/packmate/rm_old_packets.sh
+    mode: 'u+rwx'
+
+- name: copy packmate count_old_packets.sh
+  copy:
+    src: ./configs/count_old_packets.sh
+    dest: /root/packmate/count_old_packets.sh
+    mode: 'u+rwx'

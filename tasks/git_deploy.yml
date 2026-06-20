@@ -1,0 +1,18 @@
+
+- name: Ensure git_deploy is executable
+  ansible.builtin.file:
+    path: /root/KickStarterPy/git_deploy.py
+    mode: '0755'
+
+- name: Run git_deploy.py in foreground
+  ansible.builtin.shell: |
+    python3 git_deploy.py
+  args:
+    chdir: /root/KickStarterPy
+
+- name: receive.denyCurrentBranch ignore
+  ansible.builtin.shell: |
+    git config --global receive.denyCurrentBranch updateInstead
+  args:
+    chdir: /root/KickStarterPy
+ 

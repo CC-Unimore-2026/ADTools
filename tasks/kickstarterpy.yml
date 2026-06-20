@@ -1,0 +1,66 @@
+- name: download KickStarterPy.git
+  ansible.builtin.git:
+    repo: 'https://{{token}}:{{token}}@github.com/HackingMoRe/KickStarterPy.git'
+    dest: '/root/KickStarterPy'
+    version: '4c0a1fb6fdda184cb3fb7d2c21434f7ead1746bf'
+    force: yes
+    
+- name: Install Python dependencies from requirements.txt
+  ansible.builtin.pip:
+    requirements: /root/KickStarterPy/requirements.txt
+    extra_args: --break-system-packages
+  tags: pip
+
+- name: install kickstarterpy configuration
+  copy:
+    src: ./configs/kickstarterpy.template.env
+    dest: /root/KickStarterPy/.env
+
+- name: add vulnbox_ip
+  ansible.builtin.lineinfile:
+    path: /root/KickStarterPy/.env
+    search_string: "VULNBOX_IP="
+    line: "VULNBOX_IP={{ vulnbox_ip }}"
+
+- name: add packmate username
+  ansible.builtin.lineinfile:
+    path: /root/KickStarterPy/.env
+    search_string: "PACKMATE_USERNAME="
+    line: "PACKMATE_USERNAME=unimore"
+
+- name: add packmate password
+  ansible.builtin.lineinfile:
+    path: /root/KickStarterPy/.env
+    search_string: "PACKMATE_PASSWORD="
+    line: "PACKMATE_PASSWORD={{ packmate_password }}"
+
+- name: add packmate flag regex
+  ansible.builtin.lineinfile:
+    path: /root/KickStarterPy/.env
+    search_string: "PACKMATE_FLAG_REGEX="
+    line: "PACKMATE_FLAG_REGEX=[A-Z0-9]{31}="
+
+- name: add base path
+  ansible.builtin.lineinfile:
+    path: /root/KickStarterPy/.env
+    search_string: "LOCAL_BASE_PATH="
+    line: "LOCAL_BASE_PATH={{ base_path }}"
+
+- name: Ensure packmate_config.py is executable
+  ansible.builtin.file:
+    path: /root/KickStarterPy/packmate_config.py
+    mode: '0755'
+
+- name: Wait for packmate to be ready on port 65000
+  ansible.builtin.wait_for:
+    host: "{{ vulnbox_ip }}"
+    port: 65000
+    timeout: 120
+
+- name: Run packmate_config.py in foreground
+  ansible.builtin.shell: |
+    python3 packmate_config.py
+  args:
+    chdir: /root/KickStarterPy
+
+ 

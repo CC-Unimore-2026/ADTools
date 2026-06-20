@@ -1,0 +1,12 @@
+--- a/server/docker/front/Dockerfile
++++ b/server/docker/front/Dockerfile
+@@ -1,7 +1,8 @@
+ FROM node:20-slim AS front-base
+ ENV PNPM_HOME="/pnpm"
+ ENV PATH="$PNPM_HOME:$PATH"
+-RUN corepack enable
++RUN corepack enable && \
++    corepack prepare pnpm@8.15.7 --activate
+
+ COPY front /app
+ WORKDIR /app

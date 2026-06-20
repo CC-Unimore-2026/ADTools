@@ -1,0 +1,71 @@
+- name: download S4DFarm
+  ansible.builtin.git:
+    repo: 'https://github.com/C4T-BuT-S4D/S4DFarm'
+    dest: '/root/ctffarm'
+    version: 'f340ca241d581d1fbf98805023926c075478937e'
+    force: yes
+    
+- name: install custom config for S4DFarm
+  copy:
+    src: ./configs/ctffarm.config.py
+    dest: /root/ctffarm/server/app/config.py
+
+- name: patch docker-compose to use 42069 port
+  ansible.builtin.replace:
+    path: /root/ctffarm/compose.yml
+    regexp: '5137'
+    replace: '127.0.0.1:42069'
+
+- name: Apply patch to multiple files under basedir
+  ansible.posix.patch:
+    src: ./patches/s4dfarm/01_pin_pnpm_version.patch
+    basedir: /root/ctffarm/
+    strip: 1
+
+- name: update gameserver IP address
+  ansible.builtin.lineinfile:
+    path: /root/ctffarm/server/app/config.py
+    search_string: "'SYSTEM_URL': '"
+    line: "    'SYSTEM_URL': '{{ gameserver_url }}',"
+
+- name: update team token
+  ansible.builtin.lineinfile:
+    path: /root/ctffarm/server/app/config.py
+    search_string: "'SYSTEM_TOKEN': '"
+    line: "    'SYSTEM_TOKEN': '{{ team_token }}',"
+
+- name: update CTFfarm password
+  ansible.builtin.lineinfile:
+    path: /root/ctffarm/server/app/config.py
+    search_string: "'SERVER_PASSWORD': '"
+    line: "    'SERVER_PASSWORD': '{{ ctffarm_password }}',"
+
+- name: update number of teams
+  ansible.builtin.lineinfile:
+    path: /root/ctffarm/server/app/config.py
+    search_string: "for i in range(0, 40)"
+    line: "        for i in range(0, {{ number_of_teams }} + 1)"
+
+- name: update team teams_format
+  ansible.builtin.lineinfile:
+    path: /root/ctffarm/server/app/config.py
+    search_string: "f'Team #{i}': f'10.60.{i}.1'"
+    line: "        f'Team #{i}': {{ teams_format }}"
+
+- name: update system system_protocol
+  ansible.builtin.lineinfile:
+    path: /root/ctffarm/server/app/config.py
+    search_string: "'SYSTEM_PROTOCOL': '"
+    line: "    'SYSTEM_PROTOCOL': '{{ system_protocol }}',"
+
+- name: add 'denied' to rejected status list
+  ansible.builtin.lineinfile:
+    path: /root/ctffarm/server/app/protocols/ructf_http.py
+    search_string: "FlagStatus.REJECTED:"
+    line: "    FlagStatus.REJECTED: ['bad', 'wrong', 'expired', 'unknown', 'your own', 'denied',"
+
+- name: run S4DFarm
+  community.docker.docker_compose_v2:
+    project_src: '/root/ctffarm'
+    build: 'always'
+  register: output
