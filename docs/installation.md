@@ -22,7 +22,7 @@ python3 -m venv .venv
 ```
 
 > All the local scripts (`deploy_parallel.py`, `push_services.py`,
-> `start_sploit.py`, `gen_env.py`) must be run with the venv interpreter
+> `exploits/start_sploit.py`, `gen_env.py`) must be run with the venv interpreter
 > `.venv/bin/python`, not the system `python3` — that is where `requests` and
 > `ansible` live.
 
@@ -74,6 +74,12 @@ Run the interactive script and fill in all prompts:
 .venv/bin/python gen_env.py
 ```
 
+To avoid retyping the same values on every run, copy `.env.example` to `.env`
+and fill it in first. `gen_env.py` loads `.env` and offers each value as the
+default for its prompt (press Enter to accept, or type to override). `.env` is
+gitignored; only `.env.example` is committed. The generated secrets (passwords,
+keys) are never stored in `.env` — `gen_env.py` randomizes them into `.env.json`.
+
 Or create it directly (adjust values as needed):
 
 ```sh
@@ -90,6 +96,8 @@ env = {
     'game_interface': 'game',
     'github_org': '<github_org>',          # org to publish the services to
     'github_token': '<github_token>',      # token with push access to that org
+    'tool_repos_org': '<tool_repos_org>',  # org hosting the tool repos
+    'tool_repos_token': '<tool_repos_token>',  # token to clone the tool repos
     'root_password': secrets.token_hex(32),
     'packmate_password': secrets.token_hex(32),
     'ctffarm_password': secrets.token_hex(32),
@@ -104,10 +112,10 @@ with open('.env.json', 'w') as f:
     json.dump(env, f, indent=4)
 os.chmod('.env.json', 0o600)
 
-with open('run_exploit.sh', 'r') as f:
+with open('exploits/run_exploit.sh', 'r') as f:
     lines = f.readlines()
 lines[2] = f'\t--server-pass {env["ctffarm_password"]} \\\n'
-with open('run_exploit.sh', 'w') as f:
+with open('exploits/run_exploit.sh', 'w') as f:
     f.writelines(lines)
 EOF
 ```

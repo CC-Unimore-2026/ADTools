@@ -2,18 +2,35 @@
 import argparse
 import concurrent.futures
 import json
+import os
 import subprocess
 import time
 
 # --- CONFIGURAZIONE ---
-GITHUB_TOKEN = "***"
+# Il token per clonare i repo dei tool: di default viene letto da .env.json
+# (campo tool_repos_token), ma può essere forzato con --token.
+ENV_FILE = ".env.json"
+# Il playbook e ansible.cfg vivono in ansible/. Restiamo nella root del repo
+# (così @.env.json e ./ssh_keys restano relativi alla root) e indichiamo il
+# config ad Ansible via ANSIBLE_CONFIG, dato che ansible.cfg si carica solo
+# dalla cwd.
+PLAYBOOK = "ansible/vulnbox_deploy.yml"
+ANSIBLE_CFG = "ansible/ansible.cfg"
+
+
+def tool_repos_token_from_env():
+    try:
+        with open(ENV_FILE) as f:
+            return json.load(f).get("tool_repos_token")
+    except Exception:
+        return None
 
 
 # --- FUNZIONI ---
 def run_deploy(github_token, module, password):
     cmd = [
         ".venv/bin/ansible-playbook",
-        "vulnbox_deploy.yml",
+        PLAYBOOK,
         "-i",
         "vulnbox,",
         "-u",
@@ -28,7 +45,11 @@ def run_deploy(github_token, module, password):
 
     print(f"\n[INFO] Starting deploy for module: {module}\n{'=' * 50}")
     process = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        env={**os.environ, "ANSIBLE_CONFIG": ANSIBLE_CFG},
     )
 
     for line in iter(process.stdout.readline, ""):
@@ -49,7 +70,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--modules", nargs="+", help="Lista dei moduli da deployare")
     parser.add_argument(
-        "--token", default=GITHUB_TOKEN, help="GitHub token for authentication"
+        "--token",
+        default=None,
+        help="GitHub token to clone the tool repos (default: tool_repos_token in .env.json)",
     )
     parser.add_argument(
         "--vulnbox-password",
@@ -64,7 +87,12 @@ def main():
     args = parser.parse_args()
 
     selected_modules = args.modules
-    github_token = args.token
+    github_token = args.token or tool_repos_token_from_env()
+    if not github_token:
+        print(
+            "[ERROR] No tool repos token: pass --token or set tool_repos_token in .env.json."
+        )
+        return
     initial_password = args.vulnbox_password
     if not selected_modules:
         selected_modules = [

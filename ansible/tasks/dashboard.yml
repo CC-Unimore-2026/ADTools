@@ -1,6 +1,6 @@
 - name: download flag_dashboard
   ansible.builtin.git:
-    repo: 'https://{{token}}:{{token}}@github.com/HackingMoRe/flag_dashboard.git'
+    repo: 'https://{{token}}:{{token}}@github.com/{{tool_repos_org}}/flag_dashboard.git'
     dest: '/root/flag_dashboard'
     version: 'a4c68f92c1a8e3f7c3fbf0115b7b36edc17be58b'
     force: yes

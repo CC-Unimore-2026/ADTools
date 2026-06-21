@@ -1,6 +1,6 @@
 - name: download wisscon
   ansible.builtin.git:
-    repo: 'https://{{token}}:{{token}}@github.com/HackingMoRe/wisscon.git'
+    repo: 'https://{{token}}:{{token}}@github.com/{{tool_repos_org}}/wisscon.git'
     dest: '/root/wisscon'
     version: '2d1bafb330f7a179f0ad11933cd423209f9bc87b'
     force: yes

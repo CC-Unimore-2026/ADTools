@@ -55,7 +55,7 @@
     exclusive: false
     user: root
     state: present
-    key: "{{ lookup('file', './ssh_keys') }}"
+    key: "{{ lookup('file', playbook_dir + '/../ssh_keys') }}"
 
 - name: change root password
   user:
