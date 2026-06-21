@@ -149,7 +149,7 @@ docker logs --follow proxy
 
 ## Deploy filters via Ansible
 
-To version-control your filter modules, store them in `configs/threesome_filters/` locally and copy them in `tasks/threesome.yml` after the setup step:
+To version-control your filter modules, store them in `ansible/configs/threesome_filters/` locally and copy them in `ansible/tasks/threesome.yml` after the setup step:
 
 ```yaml
 - name: Setup threesome

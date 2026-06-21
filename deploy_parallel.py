@@ -2,6 +2,7 @@
 import argparse
 import concurrent.futures
 import json
+import os
 import subprocess
 import time
 
@@ -9,6 +10,12 @@ import time
 # Il token per clonare i repo dei tool: di default viene letto da .env.json
 # (campo tool_repos_token), ma può essere forzato con --token.
 ENV_FILE = ".env.json"
+# Il playbook e ansible.cfg vivono in ansible/. Restiamo nella root del repo
+# (così @.env.json e ./ssh_keys restano relativi alla root) e indichiamo il
+# config ad Ansible via ANSIBLE_CONFIG, dato che ansible.cfg si carica solo
+# dalla cwd.
+PLAYBOOK = "ansible/vulnbox_deploy.yml"
+ANSIBLE_CFG = "ansible/ansible.cfg"
 
 
 def tool_repos_token_from_env():
@@ -23,7 +30,7 @@ def tool_repos_token_from_env():
 def run_deploy(github_token, module, password):
     cmd = [
         ".venv/bin/ansible-playbook",
-        "vulnbox_deploy.yml",
+        PLAYBOOK,
         "-i",
         "vulnbox,",
         "-u",
@@ -38,7 +45,11 @@ def run_deploy(github_token, module, password):
 
     print(f"\n[INFO] Starting deploy for module: {module}\n{'=' * 50}")
     process = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        env={**os.environ, "ANSIBLE_CONFIG": ANSIBLE_CFG},
     )
 
     for line in iter(process.stdout.readline, ""):

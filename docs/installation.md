@@ -22,7 +22,7 @@ python3 -m venv .venv
 ```
 
 > All the local scripts (`deploy_parallel.py`, `push_services.py`,
-> `start_sploit.py`, `gen_env.py`) must be run with the venv interpreter
+> `exploits/start_sploit.py`, `gen_env.py`) must be run with the venv interpreter
 > `.venv/bin/python`, not the system `python3` — that is where `requests` and
 > `ansible` live.
 
@@ -112,10 +112,10 @@ with open('.env.json', 'w') as f:
     json.dump(env, f, indent=4)
 os.chmod('.env.json', 0o600)
 
-with open('run_exploit.sh', 'r') as f:
+with open('exploits/run_exploit.sh', 'r') as f:
     lines = f.readlines()
 lines[2] = f'\t--server-pass {env["ctffarm_password"]} \\\n'
-with open('run_exploit.sh', 'w') as f:
+with open('exploits/run_exploit.sh', 'w') as f:
     f.writelines(lines)
 EOF
 ```

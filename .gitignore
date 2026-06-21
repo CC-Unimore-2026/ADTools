@@ -1,6 +1,11 @@
 .env.json*
 .env
-exploits/
+# exploits/ holds the tracked farm tooling plus the operator's own sploits;
+# ignore everything except the tooling.
+exploits/*
+!exploits/start_sploit.py
+!exploits/exploit_template.py
+!exploits/run_exploit.sh
 __pycache__/
 .venv/
 ssh_keys

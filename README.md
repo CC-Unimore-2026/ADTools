@@ -22,10 +22,10 @@ so these scripts may not work well for every Attack/Defence CTF.
 
 ## Writing Exploits
 
-`exploit_template.py` is a ready-to-edit sploit skeleton for the farm
-(`start_sploit.py` / S4DFarm). Copy it per service and fill in the gaps.
+`exploits/exploit_template.py` is a ready-to-edit sploit skeleton for the farm
+(`exploits/start_sploit.py` / S4DFarm). Copy it per service and fill in the gaps.
 
-**Contract** (enforced by `start_sploit.py`):
+**Contract** (enforced by `exploits/start_sploit.py`):
 - Executable with a shebang as line 1.
 - Takes the victim host/IP as `argv[1]`.
 - Prints each captured flag on its own line, flushing immediately
@@ -53,18 +53,18 @@ service differs.
 **Run manually (single target):**
 
 ```sh
-.venv/bin/python exploit_template.py <vulnbox_ip>
+.venv/bin/python exploits/exploit_template.py <vulnbox_ip>
 ```
 
 **Run against all teams via the farm:**
 
 ```sh
-.venv/bin/python start_sploit.py \
+.venv/bin/python exploits/start_sploit.py \
   --server-url http://127.0.0.1:42069 \
   --server-pass <ctffarm_password> \
   --interpreter .venv/bin/python \
   --pool-size 45 \
-  ./exploit_template.py
+  ./exploits/exploit_template.py
 ```
 
-Or use the wrapper: `bash run_exploit.sh ./exploit_template.py`.
+Or use the wrapper: `bash exploits/run_exploit.sh ./exploits/exploit_template.py`.

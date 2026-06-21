@@ -139,13 +139,14 @@ with open(ENV_FILE_PATH, "w") as f:
 
 os.chmod(ENV_FILE_PATH, 0o600)
 
-# Patch run_exploit.sh line with new password
+# Patch exploits/run_exploit.sh line with new password
+RUN_EXPLOIT_PATH = "exploits/run_exploit.sh"
 try:
-    with open("run_exploit.sh", "r") as f:
+    with open(RUN_EXPLOIT_PATH, "r") as f:
         lines = f.readlines()
     if len(lines) >= 3:
         lines[2] = f"\t--server-pass {env['ctffarm_password']} \\\n"
-        with open("run_exploit.sh", "w") as f:
+        with open(RUN_EXPLOIT_PATH, "w") as f:
             f.writelines(lines)
 except FileNotFoundError:
-    print("WARN: run_exploit.sh not found — skipping password injection.")
+    print(f"WARN: {RUN_EXPLOIT_PATH} not found — skipping password injection.")
