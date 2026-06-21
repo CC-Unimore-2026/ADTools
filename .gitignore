@@ -1,2 +1,3 @@
 .env.json*
 exploits/
+__pycache__/

@@ -38,6 +38,11 @@ if "{i}" not in team_ip_format:
 
 game_interface = input("Enter network interface name for the game: ")
 
+github_org = input("Enter GitHub organization to push the vulnbox services to: ")
+github_token = input(
+    "Enter GitHub token with push access to that org (used to publish services): "
+)
+
 exploit_vm_endpoint = input("Enter exploit VM endpoint [<ip>:<port>]: ")
 if ":" not in exploit_vm_endpoint:
     print("ERROR: only <ip>:<port> format is accepted")
@@ -56,6 +61,8 @@ env = {
     "number_of_teams": number_of_teams,
     "teams_format": f"f'{team_ip_format}'",
     "game_interface": game_interface,
+    "github_org": github_org,
+    "github_token": github_token,
     "root_password": secrets.token_hex(32),
     "packmate_password": secrets.token_hex(32),
     "ctffarm_password": secrets.token_hex(32),

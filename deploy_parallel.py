@@ -56,6 +56,11 @@ def main():
         required=True,
         help="Initial vulnbox root password (before common changes it)",
     )
+    parser.add_argument(
+        "--skip-push",
+        action="store_true",
+        help="Skip scanning/pushing the vulnbox services to GitHub after deploy",
+    )
     args = parser.parse_args()
 
     selected_modules = args.modules
@@ -140,6 +145,17 @@ def main():
     duration = end_time - start_time
     minutes, seconds = divmod(duration, 60)
     print(f"\n Tempo totale di esecuzione: {int(minutes)} min {seconds:.2f} sec")
+
+    # Step finale: pubblica i servizi della vulnbox come repository su GitHub.
+    if args.skip_push:
+        print("[INFO] --skip-push set, skipping service push.")
+    else:
+        try:
+            import push_services
+
+            push_services.main(env=data, password=root_password)
+        except Exception as e:
+            print(f"[ERROR] Service push step failed: {e}")
 
 
 if __name__ == "__main__":

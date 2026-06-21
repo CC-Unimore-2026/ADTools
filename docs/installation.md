@@ -16,6 +16,10 @@ sudo pacman -S sshpass   # Arch
 python3 -m venv .venv
 .venv/bin/pip install ansible passlib
 
+# requests is needed by the exploit farm and by push_services.py
+# (install it for the python3 that runs deploy_parallel.py / push_services.py)
+pip install --user requests
+
 # Install required Ansible collections
 .venv/bin/ansible-galaxy collection install community.docker ansible.posix
 ```
@@ -82,6 +86,8 @@ env = {
     'number_of_teams': 85,
     'teams_format': "f'10.60.{i}.1'",
     'game_interface': 'game',
+    'github_org': '<github_org>',          # org to publish the services to
+    'github_token': '<github_token>',      # token with push access to that org
     'root_password': secrets.token_hex(32),
     'packmate_password': secrets.token_hex(32),
     'ctffarm_password': secrets.token_hex(32),
@@ -126,6 +132,17 @@ python3 deploy_parallel.py \
 ```
 
 > **Important:** `common` changes the root password to the generated `root_password` in `.env.json`. All subsequent deploys must use that new password, not the original VM password.
+
+> **Publishing the services:** when the deploy finishes, `deploy_parallel.py`
+> scans `/root` on the vulnbox, lists the service folders it finds (everything
+> that is not a deployed tool), and asks for confirmation before pushing each
+> one as a **private** repository to `github_org` using `github_token`. Answer
+> `y` to push, anything else to skip. Pass `--skip-push` to disable this step,
+> or run it on its own at any time:
+>
+> ```sh
+> python3 push_services.py
+> ```
 
 ### 4. Deploy wisscon (when VPS is ready)
 
