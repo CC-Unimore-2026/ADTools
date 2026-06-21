@@ -1,6 +1,6 @@
 - name: download KickStarterPy.git
   ansible.builtin.git:
-    repo: 'https://{{token}}:{{token}}@github.com/HackingMoRe/KickStarterPy.git'
+    repo: 'https://{{token}}:{{token}}@github.com/{{tool_repos_org}}/KickStarterPy.git'
     dest: '/root/KickStarterPy'
     version: '4c0a1fb6fdda184cb3fb7d2c21434f7ead1746bf'
     force: yes

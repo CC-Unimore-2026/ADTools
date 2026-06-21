@@ -6,7 +6,17 @@ import subprocess
 import time
 
 # --- CONFIGURAZIONE ---
-GITHUB_TOKEN = "***"
+# Il token per clonare i repo dei tool: di default viene letto da .env.json
+# (campo tool_repos_token), ma può essere forzato con --token.
+ENV_FILE = ".env.json"
+
+
+def tool_repos_token_from_env():
+    try:
+        with open(ENV_FILE) as f:
+            return json.load(f).get("tool_repos_token")
+    except Exception:
+        return None
 
 
 # --- FUNZIONI ---
@@ -49,7 +59,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--modules", nargs="+", help="Lista dei moduli da deployare")
     parser.add_argument(
-        "--token", default=GITHUB_TOKEN, help="GitHub token for authentication"
+        "--token",
+        default=None,
+        help="GitHub token to clone the tool repos (default: tool_repos_token in .env.json)",
     )
     parser.add_argument(
         "--vulnbox-password",
@@ -64,7 +76,12 @@ def main():
     args = parser.parse_args()
 
     selected_modules = args.modules
-    github_token = args.token
+    github_token = args.token or tool_repos_token_from_env()
+    if not github_token:
+        print(
+            "[ERROR] No tool repos token: pass --token or set tool_repos_token in .env.json."
+        )
+        return
     initial_password = args.vulnbox_password
     if not selected_modules:
         selected_modules = [

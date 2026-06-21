@@ -1,6 +1,6 @@
 - name: download threesome
   ansible.builtin.git:
-    repo: 'https://{{token}}:{{token}}@github.com/HackingMoRe/threesome.git'
+    repo: 'https://{{token}}:{{token}}@github.com/{{tool_repos_org}}/threesome.git'
     dest: '/root/threesome'
     version: '2d8adaafab8c8ae562f5dad3108216c5ce4db01a'
     force: yes

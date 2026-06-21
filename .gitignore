@@ -1,4 +1,6 @@
 .env.json*
+.env
 exploits/
 __pycache__/
 .venv/
+ssh_keys

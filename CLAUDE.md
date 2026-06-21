@@ -48,16 +48,28 @@ Three layers:
 target + all generated secrets. Generated interactively by `gen_env.py`, then
 passed to Ansible as `--extra-vars @.env.json`. `gen_env.py` also patches the
 `--server-pass` line (line 3) of `run_exploit.sh` with the generated
-`ctffarm_password`. There is no `.env.json.example`; see `docs/installation.md`
-for the field list.
+`ctffarm_password`.
+
+User-supplied (non-secret) inputs can be pre-filled in `.env` (a `KEY=value`
+file, gitignored). `gen_env.py` loads it via `load_dotenv()` and uses each value
+as the DEFAULT for its prompt — Enter accepts, typing overrides. Only
+`.env.example` is committed; keep its keys in sync with the `ask(...)` calls in
+`gen_env.py`. Generated secrets are NOT in `.env` — they are randomized into
+`.env.json`. See `docs/installation.md` for the field list.
 
 `teams_format` is stored as a Python f-string literal (e.g. `"f'10.60.{i}.1'"`)
 and `eval`'d downstream to enumerate team IPs.
 
-`github_org` / `github_token` (prompted by `gen_env.py`) are used by
-`push_services.py` to publish the vulnbox service folders as private repos.
-This token is distinct from the `GITHUB_TOKEN` in `deploy_parallel.py`, which is
-the `token` extra-var used by Ansible to clone the private *tool* repos.
+There are two independent GitHub identities, both stored in `.env.json`:
+
+- `github_org` / `github_token` — used by `push_services.py` to PUBLISH the
+  vulnbox service folders as private repos (push access to your org).
+- `tool_repos_org` / `tool_repos_token` — used by Ansible to CLONE the private
+  *tool* repos (read access). The org is no longer hardcoded: `tasks/*.yml` clone
+  from `{{ tool_repos_org }}` and `deploy_parallel.py` passes `tool_repos_token`
+  as the `token` extra-var (CLI `--token` overrides it; default reads
+  `tool_repos_token` from `.env.json`). To move to a new org, just set these two.
+
 `push_services.py` decides what counts as a "service" by excluding the deployed
 tool dirs — keep its `TOOL_DIRS` set in sync if a module's `/root` dest changes.
 
@@ -123,9 +135,9 @@ them in `tasks/threesome.yml`. Full reference: `docs/threesome.md`.
 
 ## Gotchas
 
-- Secrets (`GITHUB_TOKEN` in `deploy_parallel.py`, passwords in `run_exploit.sh`
-  / `hosts.sh`) are committed as `***` placeholders in the repo history; real
-  values live only in `.env.json` at runtime. Never commit real secrets.
+- Secrets (GitHub tokens, passwords in `run_exploit.sh` / `hosts.sh`) are
+  committed as `***` placeholders in the repo history; real values live only in
+  `.env.json` (or your local `.env`) at runtime. Never commit real secrets.
 - `ubuntu_version` in `vulnbox_deploy.yml` (default `jammy`) gates the Docker
   apt repo — set it to match the actual vulnbox Ubuntu release.
 - Comments and CLI help in `deploy_parallel.py` / `gen_env.py` are in Italian;
