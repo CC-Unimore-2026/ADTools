@@ -13,16 +13,18 @@ sudo pacman -S sshpass   # Arch
 # sudo apt install sshpass  # Debian/Ubuntu
 
 # Create the Python venv inside ADTools and install dependencies
+# (requests is needed by the exploit farm, push_services.py and deploy_parallel.py)
 python3 -m venv .venv
-.venv/bin/pip install ansible passlib
-
-# requests is needed by the exploit farm and by push_services.py
-# (install it for the python3 that runs deploy_parallel.py / push_services.py)
-pip install --user requests
+.venv/bin/pip install ansible passlib requests
 
 # Install required Ansible collections
 .venv/bin/ansible-galaxy collection install community.docker ansible.posix
 ```
+
+> All the local scripts (`deploy_parallel.py`, `push_services.py`,
+> `start_sploit.py`, `gen_env.py`) must be run with the venv interpreter
+> `.venv/bin/python`, not the system `python3` — that is where `requests` and
+> `ansible` live.
 
 A Linux host is assumed (it can probably be launched from Windows too, but this is untested).
 
@@ -34,7 +36,7 @@ Values from the competition portal go into `.env.json` (generated in step 3).
 
 | Field | Value |
 |---|---|
-| Team ID | 39 |
+| Team ID | <team id> |
 | Vulnbox IP | <vulnbox_ip> |
 | Initial VM password | `******` |
 | Team token | `***` |
@@ -69,13 +71,13 @@ This makes Ansible resolve the hostname `vulnbox` correctly. The NOP team is `10
 Run the interactive script and fill in all prompts:
 
 ```sh
-python3 gen_env.py
+.venv/bin/python gen_env.py
 ```
 
 Or create it directly (adjust values as needed):
 
 ```sh
-python3 - <<'EOF'
+.venv/bin/python - <<'EOF'
 import json, os, secrets
 
 env = {
@@ -117,7 +119,7 @@ EOF
 Run all modules in the correct order (common → parallel → kickstarterpy):
 
 ```sh
-python3 deploy_parallel.py \
+.venv/bin/python deploy_parallel.py \
   --vulnbox-password **** \
   --modules common kickstarterpy s4dfarm packmate dashboard
 ```
@@ -126,8 +128,8 @@ To deploy only specific modules (e.g., after a partial failure or to redeploy a 
 
 ```sh
 # After common has already run, use the NEW root password from .env.json
-python3 deploy_parallel.py \
-  --vulnbox-password $(python3 -c "import json; print(json.load(open('.env.json'))['root_password'])") \
+.venv/bin/python deploy_parallel.py \
+  --vulnbox-password $(.venv/bin/python -c "import json; print(json.load(open('.env.json'))['root_password'])") \
   --modules packmate dashboard
 ```
 
@@ -141,7 +143,7 @@ python3 deploy_parallel.py \
 > or run it on its own at any time:
 >
 > ```sh
-> python3 push_services.py
+> .venv/bin/python push_services.py
 > ```
 
 ### 4. Deploy wisscon (when VPS is ready)
@@ -157,8 +159,8 @@ Fill in the VPN fields in `.env.json`:
 The wireguard private key is on the vulnbox at `/etc/wireguard/wg0.conf` (or similar). Then:
 
 ```sh
-python3 deploy_parallel.py \
-  --vulnbox-password $(python3 -c "import json; print(json.load(open('.env.json'))['root_password'])") \
+.venv/bin/python deploy_parallel.py \
+  --vulnbox-password $(.venv/bin/python -c "import json; print(json.load(open('.env.json'))['root_password'])") \
   --modules wisscon threesome
 ```
 

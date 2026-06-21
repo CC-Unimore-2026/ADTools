@@ -53,16 +53,16 @@ service differs.
 **Run manually (single target):**
 
 ```sh
-./exploit_template.py <vulnbox_ip>
+.venv/bin/python exploit_template.py <vulnbox_ip>
 ```
 
 **Run against all teams via the farm:**
 
 ```sh
-python3 start_sploit.py \
+.venv/bin/python start_sploit.py \
   --server-url http://127.0.0.1:42069 \
   --server-pass <ctffarm_password> \
-  --interpreter python3 \
+  --interpreter .venv/bin/python \
   --pool-size 45 \
   ./exploit_template.py
 ```

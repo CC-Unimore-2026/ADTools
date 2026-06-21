@@ -66,22 +66,22 @@ tool dirs — keep its `TOOL_DIRS` set in sync if a module's `/root` dest change
 Setup (one time):
 ```sh
 python3 -m venv .venv
-.venv/bin/pip install ansible passlib
+.venv/bin/pip install ansible passlib requests
 .venv/bin/ansible-galaxy collection install community.docker ansible.posix
-python3 gen_env.py                 # creates .env.json (refuses if it exists)
+.venv/bin/python gen_env.py                 # creates .env.json (refuses if it exists)
 sudo bash hosts.sh <vulnbox_ip> <nop_ip>   # adds `vulnbox` alias to /etc/hosts
 ```
 
 Deploy (first run uses the *initial* VM password):
 ```sh
-python3 deploy_parallel.py --vulnbox-password <initial_pw> \
+.venv/bin/python deploy_parallel.py --vulnbox-password <initial_pw> \
   --modules common kickstarterpy s4dfarm packmate dashboard
 ```
 
 Redeploy a single module (use the *new* root password from .env.json):
 ```sh
-python3 deploy_parallel.py \
-  --vulnbox-password $(python3 -c "import json;print(json.load(open('.env.json'))['root_password'])") \
+.venv/bin/python deploy_parallel.py \
+  --vulnbox-password $(.venv/bin/python -c "import json;print(json.load(open('.env.json'))['root_password'])") \
   --modules threesome
 ```
 
@@ -94,9 +94,13 @@ Run an Ansible module directly (what deploy_parallel.py shells out to):
 
 Exploits / farm:
 ```sh
-./exploit_template.py <vulnbox_ip>         # single target, manual
-bash run_exploit.sh ./myexploit.py         # all teams via S4DFarm
+.venv/bin/python exploit_template.py <vulnbox_ip>   # single target, manual
+bash run_exploit.sh ./myexploit.py                  # all teams via S4DFarm
 ```
+
+All local scripts run under `.venv/bin/python` (it has `requests` + `ansible`),
+not the system `python3`. The exploit farm passes `--interpreter .venv/bin/python`
+so sploits inherit the same env.
 
 Pull services off / push patches to the vulnbox:
 ```sh

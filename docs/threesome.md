@@ -58,7 +58,7 @@ On first run, threesome auto-generates two module files per service inside `prox
 cd /root/threesome
 docker compose up --build -d
 # or without docker:
-cd proxy && python3 proxy.py
+cd proxy && .venv/bin/python proxy.py
 ```
 
 ## Step 3 — Write filter functions
@@ -165,7 +165,7 @@ To version-control your filter modules, store them in `configs/threesome_filters
 ## Redeploy threesome only
 
 ```sh
-python3 deploy_parallel.py \
-  --vulnbox-password $(python3 -c "import json; print(json.load(open('.env.json'))['root_password'])") \
+.venv/bin/python deploy_parallel.py \
+  --vulnbox-password $(.venv/bin/python -c "import json; print(json.load(open('.env.json'))['root_password'])") \
   --modules threesome
 ```
