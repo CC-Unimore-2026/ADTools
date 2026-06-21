@@ -102,12 +102,6 @@ All local scripts run under `.venv/bin/python` (it has `requests` + `ansible`),
 not the system `python3`. The exploit farm passes `--interpreter .venv/bin/python`
 so sploits inherit the same env.
 
-Pull services off / push patches to the vulnbox:
-```sh
-bash vulnbox_download.sh    # rsync /root/* (minus tools) into ./services
-bash vulnbox_patch.sh       # rsync ./services/* back to vulnbox:/root
-```
-
 ## Writing exploits
 
 `exploit_template.py` is the sploit skeleton run by `start_sploit.py` (S4DFarm).
@@ -130,9 +124,8 @@ them in `tasks/threesome.yml`. Full reference: `docs/threesome.md`.
 ## Gotchas
 
 - Secrets (`GITHUB_TOKEN` in `deploy_parallel.py`, passwords in `run_exploit.sh`
-  / `hosts.sh` / `vulnbox_download.sh`) are committed as `***` placeholders in
-  the repo history; real values live only in `.env.json` at runtime. Never
-  commit real secrets.
+  / `hosts.sh`) are committed as `***` placeholders in the repo history; real
+  values live only in `.env.json` at runtime. Never commit real secrets.
 - `ubuntu_version` in `vulnbox_deploy.yml` (default `jammy`) gates the Docker
   apt repo — set it to match the actual vulnbox Ubuntu release.
 - Comments and CLI help in `deploy_parallel.py` / `gen_env.py` are in Italian;
