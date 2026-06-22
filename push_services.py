@@ -10,7 +10,7 @@ standalone:
 
 Reads everything it needs from .env.json:
   - vulnbox connection (hostname `vulnbox` from /etc/hosts, root_password)
-  - github_org / github_token (prompted by gen_env.py)
+  - github_org / github_token (filled in by hand from env.json.example)
 
 A "service" is any directory directly under /root that is not one of the tools
 this repo deploys (and not a hidden dotfile dir). The git init/commit/push runs
@@ -116,7 +116,11 @@ def push_service(password: str, org: str, token: str, service: str) -> bool:
         return False
 
     remote_url = f"https://x-access-token:{token}@github.com/{org}/{name}.git"
+    # Service dirs may already be git repos owned by a different uid than the
+    # SSH user (root) — git then refuses with "detected dubious ownership".
+    # Mark the path safe before any git op.
     remote_cmd = (
+        f"git config --global --add safe.directory /root/{service!r} && "
         f"cd /root/{service!r} && "
         "git init -q && "
         "git add -A && "

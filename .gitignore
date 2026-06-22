@@ -1,5 +1,4 @@
 .env.json*
-.env
 # exploits/ holds the tracked farm tooling plus the operator's own sploits;
 # ignore everything except the tooling.
 exploits/*

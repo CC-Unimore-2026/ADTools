@@ -3,6 +3,7 @@ import argparse
 import concurrent.futures
 import json
 import os
+import secrets
 import subprocess
 import time
 
@@ -10,6 +11,61 @@ import time
 # Il token per clonare i repo dei tool: di default viene letto da .env.json
 # (campo tool_repos_token), ma può essere forzato con --token.
 ENV_FILE = ".env.json"
+RUN_EXPLOIT_PATH = "exploits/run_exploit.sh"
+
+# Segreti generati a runtime: se il campo manca o è vuoto in .env.json viene
+# riempito con un valore casuale (prima si occupava gen_env.py, ora rimosso).
+SECRET_GENERATORS = {
+    "root_password": lambda: secrets.token_hex(32),
+    "packmate_password": lambda: secrets.token_hex(32),
+    "ctffarm_password": lambda: secrets.token_hex(32),
+    "flag_dashboard_key": lambda: secrets.token_hex(32),
+    "flag_dashboard_password": lambda: secrets.token_urlsafe(12),
+}
+
+
+def ensure_env():
+    """Riempie i segreti mancanti in .env.json e patcha run_exploit.sh.
+
+    Sostituisce gen_env.py: .env.json è ora l'unica fonte di verità (copiato
+    a mano da env.json.example), ma i segreti restano auto-generati così non
+    vanno scritti a mano. I valori esistenti non vengono mai sovrascritti.
+    """
+    try:
+        with open(ENV_FILE) as f:
+            env = json.load(f)
+    except Exception as e:
+        raise SystemExit(
+            f"[ERROR] Could not read {ENV_FILE}: {e}\n"
+            "Copy env.json.example to .env.json and fill in your values first."
+        )
+
+    changed = False
+    for key, gen in SECRET_GENERATORS.items():
+        if not env.get(key):
+            env[key] = gen()
+            changed = True
+            print(f"[INFO] Generated missing secret: {key}")
+
+    if changed:
+        with open(ENV_FILE, "w") as f:
+            json.dump(env, f, indent=4)
+        os.chmod(ENV_FILE, 0o600)
+
+    # Patcha la riga --server-pass (riga 3) di run_exploit.sh col ctffarm_password.
+    try:
+        with open(RUN_EXPLOIT_PATH) as f:
+            lines = f.readlines()
+        if len(lines) >= 3:
+            new_line = f"\t--server-pass {env['ctffarm_password']} \\\n"
+            if lines[2] != new_line:
+                lines[2] = new_line
+                with open(RUN_EXPLOIT_PATH, "w") as f:
+                    f.writelines(lines)
+    except FileNotFoundError:
+        print(f"[WARN] {RUN_EXPLOIT_PATH} not found — skipping password injection.")
+
+    return env
 # Il playbook e ansible.cfg vivono in ansible/. Restiamo nella root del repo
 # (così @.env.json e ./ssh_keys restano relativi alla root) e indichiamo il
 # config ad Ansible via ANSIBLE_CONFIG, dato che ansible.cfg si carica solo
@@ -85,6 +141,10 @@ def main():
         help="Skip scanning/pushing the vulnbox services to GitHub after deploy",
     )
     args = parser.parse_args()
+
+    # .env.json è l'unica fonte di verità: riempi i segreti mancanti prima di
+    # tutto, così 'common' può già impostare il nuovo root_password.
+    ensure_env()
 
     selected_modules = args.modules
     github_token = args.token or tool_repos_token_from_env()

@@ -17,7 +17,7 @@ with `.venv/bin/python` (paths like `.env.json`, `@.env.json`, `./ssh_keys`
 resolve relative to the root):
 
 - root: the local entrypoints — `deploy_parallel.py`, `push_services.py`,
-  `gen_env.py`, `hosts.sh` — plus `README.md`, `.env.example`.
+  `patch_service.py`, `hosts.sh` — plus `README.md`, `env.json.example`.
 - `ansible/`: `vulnbox_deploy.yml`, `ansible.cfg`, `tasks/`, `configs/`,
   `patches/`. `deploy_parallel.py` runs the playbook by path and points Ansible
   at the config via `ANSIBLE_CONFIG=ansible/ansible.cfg` (it only auto-loads from
@@ -64,17 +64,19 @@ Three layers:
 ## Config flow
 
 `.env.json` (gitignored, mode 0600) is the single source of truth for the
-target + all generated secrets. Generated interactively by `gen_env.py`, then
-passed to Ansible as `--extra-vars @.env.json`. `gen_env.py` also patches the
-`--server-pass` line (line 3) of `exploits/run_exploit.sh` with the generated
-`ctffarm_password`.
+target + all generated secrets. The operator creates it by copying the committed
+`env.json.example` and filling in the values by hand; it is passed to Ansible as
+`--extra-vars @.env.json`.
 
-User-supplied (non-secret) inputs can be pre-filled in `.env` (a `KEY=value`
-file, gitignored). `gen_env.py` loads it via `load_dotenv()` and uses each value
-as the DEFAULT for its prompt — Enter accepts, typing overrides. Only
-`.env.example` is committed; keep its keys in sync with the `ask(...)` calls in
-`gen_env.py`. Generated secrets are NOT in `.env` — they are randomized into
-`.env.json`. See `docs/installation.md` for the field list.
+Secrets are NOT written by hand. `deploy_parallel.py`'s `ensure_env()` runs
+first on every deploy: any blank/missing secret field (`root_password`,
+`packmate_password`, `ctffarm_password`, `flag_dashboard_key`,
+`flag_dashboard_password`) is filled with a random value and written back
+(existing values are never overwritten). It also patches the `--server-pass`
+line (line 3) of `exploits/run_exploit.sh` with the `ctffarm_password`. This
+replaced the old interactive `gen_env.py`. When adding a key, update
+`env.json.example`; when adding a secret, add it to `SECRET_GENERATORS` in
+`deploy_parallel.py`. See `docs/installation.md` for the field list.
 
 `teams_format` is stored as a Python f-string literal (e.g. `"f'10.60.{i}.1'"`)
 and `eval`'d downstream to enumerate team IPs.
@@ -92,6 +94,12 @@ There are two independent GitHub identities, both stored in `.env.json`:
 `push_services.py` decides what counts as a "service" by excluding the deployed
 tool dirs — keep its `TOOL_DIRS` set in sync if a module's `/root` dest changes.
 
+`patch_service.py` (post-deploy, standalone) applies fixes to the running
+services using the git repos `push_services.py` created on the vulnbox: each
+patch is a commit (`apply`), rollback is a `git reset` (`rollback`), and it
+rebuilds the service's docker stack afterwards. It reuses `push_services`' SSH
+helpers (`run_ssh`, `load_env`) and the same `vulnbox` host + `root_password`.
+
 ## Common commands
 
 Setup (one time):
@@ -99,7 +107,7 @@ Setup (one time):
 python3 -m venv .venv
 .venv/bin/pip install ansible passlib requests
 .venv/bin/ansible-galaxy collection install community.docker ansible.posix
-.venv/bin/python gen_env.py                 # creates .env.json (refuses if it exists)
+cp env.json.example .env.json && chmod 600 .env.json   # then fill in the values
 sudo bash hosts.sh <vulnbox_ip> <nop_ip>   # adds `vulnbox` alias to /etc/hosts
 ```
 
@@ -122,6 +130,13 @@ ANSIBLE_CONFIG=ansible/ansible.cfg .venv/bin/ansible-playbook \
   ansible/vulnbox_deploy.yml -i vulnbox, -u root \
   --extra-vars "ansible_user=root ansible_password=<pw> token=<gh_token>" \
   --extra-vars @.env.json --extra-vars '{"modules":["s4dfarm"]}'
+```
+
+Patch a running service (git-based, with rollback):
+```sh
+.venv/bin/python patch_service.py apply <service> ./fix.diff -m "msg"
+.venv/bin/python patch_service.py rollback <service>           # default HEAD~1
+.venv/bin/python patch_service.py log <service>
 ```
 
 Exploits / farm:
@@ -157,8 +172,8 @@ and copy them in `ansible/tasks/threesome.yml`. Full reference: `docs/threesome.
 
 - Secrets (GitHub tokens, passwords in `exploits/run_exploit.sh` / `hosts.sh`)
   are committed as `***` placeholders in the repo history; real values live only
-  in `.env.json` (or your local `.env`) at runtime. Never commit real secrets.
+  in `.env.json` at runtime. Never commit real secrets.
 - `ubuntu_version` in `ansible/vulnbox_deploy.yml` (default `jammy`) gates the Docker
   apt repo — set it to match the actual vulnbox Ubuntu release.
-- Comments and CLI help in `deploy_parallel.py` / `gen_env.py` are in Italian;
-  keep that style when editing those files.
+- Comments and CLI help in `deploy_parallel.py` are in Italian; keep that style
+  when editing that file.
