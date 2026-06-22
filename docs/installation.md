@@ -22,9 +22,9 @@ python3 -m venv .venv
 ```
 
 > All the local scripts (`deploy_parallel.py`, `push_services.py`,
-> `exploits/start_sploit.py`, `gen_env.py`) must be run with the venv interpreter
-> `.venv/bin/python`, not the system `python3` — that is where `requests` and
-> `ansible` live.
+> `patch_service.py`, `exploits/start_sploit.py`) must be run with the venv
+> interpreter `.venv/bin/python`, not the system `python3` — that is where
+> `requests` and `ansible` live.
 
 A Linux host is assumed (it can probably be launched from Windows too, but this is untested).
 
@@ -32,7 +32,7 @@ A Linux host is assumed (it can probably be launched from Windows too, but this 
 
 ## Team Configuration
 
-Values from the competition portal go into `.env.json` (generated in step 3).
+Values from the competition portal go into `.env.json` (created in step 2).
 
 | Field | Value |
 |---|---|
@@ -66,61 +66,39 @@ sudo bash hosts.sh <vulnbox_ip> 10.60.0.1
 
 This makes Ansible resolve the hostname `vulnbox` correctly. The NOP team is `10.60.0.1`.
 
-### 2. Generate .env.json
+### 2. Create .env.json
 
-Run the interactive script and fill in all prompts:
-
-```sh
-.venv/bin/python gen_env.py
-```
-
-To avoid retyping the same values on every run, copy `.env.example` to `.env`
-and fill it in first. `gen_env.py` loads `.env` and offers each value as the
-default for its prompt (press Enter to accept, or type to override). `.env` is
-gitignored; only `.env.example` is committed. The generated secrets (passwords,
-keys) are never stored in `.env` — `gen_env.py` randomizes them into `.env.json`.
-
-Or create it directly (adjust values as needed):
+`.env.json` is the single source of truth: connection target, GitHub identities,
+team config, and generated secrets. Copy the committed template and fill in your
+values:
 
 ```sh
-.venv/bin/python - <<'EOF'
-import json, os, secrets
-
-env = {
-    'base_path': '/root/',
-    'vulnbox_ip': '<vulnbox_ip>',
-    'gameserver_url': 'http://10.10.0.1:8080/flags',
-    'team_token': '****',
-    'number_of_teams': 85,
-    'teams_format': "f'10.60.{i}.1'",
-    'game_interface': 'game',
-    'github_org': '<github_org>',          # org to publish the services to
-    'github_token': '<github_token>',      # token with push access to that org
-    'tool_repos_org': '<tool_repos_org>',  # org hosting the tool repos
-    'tool_repos_token': '<tool_repos_token>',  # token to clone the tool repos
-    'root_password': secrets.token_hex(32),
-    'packmate_password': secrets.token_hex(32),
-    'ctffarm_password': secrets.token_hex(32),
-    'flag_dashboard_key': secrets.token_hex(32),
-    'flag_dashboard_password': secrets.token_urlsafe(12),
-    'exploit_vm_endpoint': '',   # fill when VPS is available
-    'exploit_vm_pubkey': '',
-    'vulnbox_privkey': '',
-}
-
-with open('.env.json', 'w') as f:
-    json.dump(env, f, indent=4)
-os.chmod('.env.json', 0o600)
-
-with open('exploits/run_exploit.sh', 'r') as f:
-    lines = f.readlines()
-lines[2] = f'\t--server-pass {env["ctffarm_password"]} \\\n'
-with open('exploits/run_exploit.sh', 'w') as f:
-    f.writelines(lines)
-EOF
+cp env.json.example .env.json
+chmod 600 .env.json
+$EDITOR .env.json
 ```
 
-> **Note:** `.env.json` contains all generated secrets (passwords, keys). Keep it safe and never commit it.
+Field reference:
+
+| Field | Fill with |
+|---|---|
+| `vulnbox_ip` | Vulnbox IPv4 |
+| `gameserver_url` | Flag submission URL (must start with `http://`) |
+| `team_token` | Team token from the competition portal |
+| `number_of_teams` | Team count |
+| `teams_format` | Python f-string for team IPs, **must** keep the `f'...'` wrapper and contain `{i}` |
+| `game_interface` | Game NIC on the vulnbox (`ip link` — not what the portal says) |
+| `github_org` / `github_token` | Org + token with **push** access — used to publish the vulnbox services |
+| `tool_repos_org` / `tool_repos_token` | Org + token with **read** access — used to clone the tool repos |
+| `exploit_vm_endpoint` / `exploit_vm_pubkey` / `vulnbox_privkey` | WireGuard (leave blank until the VPS is ready) |
+
+Leave the **secret** fields (`root_password`, `packmate_password`,
+`ctffarm_password`, `flag_dashboard_key`, `flag_dashboard_password`) blank:
+`deploy_parallel.py` auto-generates any missing secret on first run, writes it
+back into `.env.json` (mode 0600), and patches the `--server-pass` line of
+`exploits/run_exploit.sh` with the generated `ctffarm_password`.
+
+> **Note:** `.env.json` is gitignored and holds all secrets. Keep it safe and never commit it.
 
 ### 3. Deploy
 
@@ -171,6 +149,40 @@ The wireguard private key is on the vulnbox at `/etc/wireguard/wg0.conf` (or sim
   --vulnbox-password $(.venv/bin/python -c "import json; print(json.load(open('.env.json'))['root_password'])") \
   --modules wisscon threesome
 ```
+
+---
+
+## Patching Running Services
+
+Once `push_services.py` has snapshotted each service into a git repo on the
+vulnbox, `patch_service.py` uses that git history to apply fixes with one-step
+rollback. Every applied patch is a commit, so reverting is just moving the ref —
+no manual backups. After each change it rebuilds the service's docker stack
+(`docker compose up -d --build`, run from the service root).
+
+```sh
+# Apply a unified diff and rebuild
+.venv/bin/python patch_service.py apply <service> ./fix.diff -m "patch sqli in login"
+
+# Or commit changes you already made directly on the box (no diff file)
+.venv/bin/python patch_service.py apply <service>
+
+# Show the patch history
+.venv/bin/python patch_service.py log <service>
+
+# Roll back the last patch (default HEAD~1) and rebuild
+.venv/bin/python patch_service.py rollback <service>
+
+# Roll back to a specific commit
+.venv/bin/python patch_service.py rollback <service> --to <commit>
+
+# Just rebuild the stack
+.venv/bin/python patch_service.py restart <service>
+```
+
+Pass `--no-restart` to `apply`/`rollback` to skip the docker rebuild. Connection
+(`vulnbox` host + `root_password`) is read from `.env.json`, same as
+`push_services.py`.
 
 ---
 
