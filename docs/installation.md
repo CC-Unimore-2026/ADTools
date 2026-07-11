@@ -90,7 +90,7 @@ Field reference:
 | `game_interface` | Game NIC on the vulnbox (`ip link` — not what the portal says) |
 | `github_org` / `github_token` | Org + token with **push** access — used to publish the vulnbox services |
 | `tool_repos_org` / `tool_repos_token` | Org + token with **read** access — used to clone the tool repos |
-| `exploit_vm_endpoint` / `exploit_vm_pubkey` / `vulnbox_privkey` | WireGuard (leave blank until the VPS is ready) |
+| `exploit_vm_endpoint` / `exploit_vm_pubkey` / `vulnbox_privkey` | WireGuard — leave blank until the VPS is ready, then fill from `exploit_vm_setup.sh` output (see §4) |
 
 Leave the **secret** fields (`root_password`, `packmate_password`,
 `ctffarm_password`, `flag_dashboard_key`, `flag_dashboard_password`) blank:
@@ -134,21 +134,51 @@ To deploy only specific modules (e.g., after a partial failure or to redeploy a 
 
 ### 4. Deploy wisscon (when VPS is ready)
 
-Fill in the VPN fields in `.env.json`:
+wisscon is a site-to-site WireGuard tunnel between the vulnbox and a separate
+**exploit VM** (VPS): the exploit VM is the WireGuard *server*, the vulnbox is
+the *client* that NATs the tunnel out its `game_interface` so the exploit VM can
+reach every team at `10.60.{i}.1`. Set up the two sides in order.
+
+**a) Exploit VM (server).** Copy `exploit_vm_setup.sh` to the VPS and run it
+there as root. It installs WireGuard, generates *both* key pairs, brings up the
+tunnel (persisted across reboot), opens the firewall, and prints the three
+values you need next:
+
+```sh
+scp exploit_vm_setup.sh <vps>:
+ssh <vps> 'sudo ./exploit_vm_setup.sh'          # defaults: port 51820, gamenet 10.60.0.0/16
+# override:  sudo ./exploit_vm_setup.sh <port> <gamenet>
+# force endpoint IP:  sudo PUBLIC_IP=1.2.3.4 ./exploit_vm_setup.sh
+```
+
+The script embeds wisscon's exact server config (tunnel `192.168.200.0/24`), so
+no GitHub token is needed on the VPS. It is idempotent — re-running rebuilds the
+tunnel with fresh keys (re-paste the new values below).
+
+**b) Vulnbox (client).** Paste the three values the script printed into
+`.env.json`:
 
 ```json
 "exploit_vm_endpoint": "VPS_IP:51820",
 "exploit_vm_pubkey": "PUBLIC_KEY_FROM_VPS",
-"vulnbox_privkey": "PRIVATE_KEY_FROM_VULNBOX_WIREGUARD_CONF"
+"vulnbox_privkey": "PRIVATE_KEY_FROM_VPS_SCRIPT"
 ```
 
-The wireguard private key is on the vulnbox at `/etc/wireguard/wg0.conf` (or similar). Then:
+If the VPS is reachable over IPv6, the endpoint **must** bracket the address:
+`"[2a01:4f8:c17:7cce::1]:51820"`. The setup script already prints it in the
+correct form — copy it verbatim.
+
+Then deploy the vulnbox side (the `wisscon` module runs
+`client-wg-config.sh`, which NATs `192.168.200.0/24` out the `game_interface`):
 
 ```sh
 .venv/bin/python deploy_parallel.py \
   --vulnbox-password $(.venv/bin/python -c "import json; print(json.load(open('.env.json'))['root_password'])") \
   --modules wisscon threesome
 ```
+
+Verify: `wg show` on both ends should list the peer with a recent handshake, and
+from the exploit VM `ping 10.60.0.1` (the NOP team) should reply.
 
 ---
 
