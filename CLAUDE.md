@@ -17,7 +17,9 @@ with `.venv/bin/python` (paths like `.env.json`, `@.env.json`, `./ssh_keys`
 resolve relative to the root):
 
 - root: the local entrypoints — `deploy_parallel.py`, `push_services.py`,
-  `patch_service.py`, `hosts.sh` — plus `README.md`, `env.json.example`.
+  `patch_service.py`, `hosts.sh` — plus `exploit_vm_setup.sh` (runs *on the
+  exploit VPS*, not locally: brings up the wisscon WireGuard server side and
+  prints the `.env.json` VPN fields), `README.md`, `env.json.example`.
 - `ansible/`: `vulnbox_deploy.yml`, `ansible.cfg`, `tasks/`, `configs/`,
   `patches/`. `deploy_parallel.py` runs the playbook by path and points Ansible
   at the config via `ANSIBLE_CONFIG=ansible/ansible.cfg` (it only auto-loads from
