@@ -6,6 +6,7 @@ import os
 import secrets
 import subprocess
 import time
+from datetime import datetime, timezone as tz
 
 # --- CONFIGURAZIONE ---
 # Il token per clonare i repo dei tool: di default viene letto da .env.json
@@ -21,6 +22,7 @@ SECRET_GENERATORS = {
     "ctffarm_password": lambda: secrets.token_hex(32),
     "flag_dashboard_key": lambda: secrets.token_hex(32),
     "flag_dashboard_password": lambda: secrets.token_urlsafe(12),
+    "tick_start": lambda: datetime.now(tz.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
 }
 
 
@@ -159,7 +161,7 @@ def main():
             "common",
             "kickstarterpy",
             "s4dfarm",
-            "packmate",
+            "tulip",
             "threesome",
             "dashboard",
             "wisscon",

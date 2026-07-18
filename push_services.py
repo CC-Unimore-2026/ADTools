@@ -30,6 +30,7 @@ VULNBOX_HOST = "vulnbox"  # alias added to /etc/hosts by hosts.sh
 TOOL_DIRS = {
     "ctffarm",
     "packmate",
+    "tulip",
     "threesome",
     "wisscon",
     "flag_dashboard",

@@ -8,6 +8,7 @@
     # Ubuntu 22.04 LTS: jammy
     # Ubuntu 24.04 LTS: 
     ubuntu_version: jammy
+    tulip_frontend_port: 65002
 
   pre_tasks:
     - name: Set modules to default if not defined
@@ -17,8 +18,8 @@
 
     - name: Fail if any module is invalid
       fail:
-        msg: "Invalid module in {{ modules }}. Allowed: all, s4dfarm, packmate, dashboard, wisscon, kickstarterpy"
-      when: modules | difference(["all", "common", "s4dfarm", "packmate", "threesome","dashboard", "wisscon", "kickstarterpy", "git_deploy"]) | length > 0
+        msg: "Invalid module in {{ modules }}. Allowed: all, common, s4dfarm, packmate, tulip, threesome, dashboard, wisscon, kickstarterpy, git_deploy"
+      when: modules | difference(["all", "common", "s4dfarm", "packmate", "tulip", "threesome", "dashboard", "wisscon", "kickstarterpy", "git_deploy"]) | length > 0
 
   tasks:
 
@@ -37,6 +38,10 @@
     - name: Include Packmate tasks
       import_tasks: tasks/packmate.yml
       when: modules is defined and ("packmate" in modules or "all" in modules)
+
+    - name: Include Tulip tasks
+      import_tasks: tasks/tulip.yml
+      when: modules is defined and ("tulip" in modules or "all" in modules)
 
     - name: Include Threesome tasks
       import_tasks: tasks/threesome.yml

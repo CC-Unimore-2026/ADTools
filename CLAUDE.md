@@ -57,8 +57,9 @@ Three layers:
    `/etc/hosts`).
 
 3. **Runtime tools on the vulnbox (Docker):** S4DFarm (flag submission farm,
-   `127.0.0.1:42069`), Packmate (pcap capture/analysis, `65000`), threesome
-   (TCP proxy for filtering attacks), flag_dashboard, wisscon (WireGuard VPN),
+   `127.0.0.1:42069`), Packmate (pcap capture/analysis, `65000`), Tulip
+   (pcap flow analysis and flag extraction, `65002`), threesome (TCP proxy
+   for filtering attacks), flag_dashboard, wisscon (WireGuard VPN),
    KickStarterPy. Most are upstream projects deployed via
    `ansible/tasks/git_deploy.yml` / git clone; this repo holds only configs
    (`ansible/configs/`) and patches (`ansible/patches/`).
@@ -74,7 +75,8 @@ Secrets are NOT written by hand. `deploy_parallel.py`'s `ensure_env()` runs
 first on every deploy: any blank/missing secret field (`root_password`,
 `packmate_password`, `ctffarm_password`, `flag_dashboard_key`,
 `flag_dashboard_password`) is filled with a random value and written back
-(existing values are never overwritten). It also patches the `--server-pass`
+(existing values are never overwritten). `tick_start` is auto-set to the
+current UTC time if left empty. It also patches the `--server-pass`
 line (line 3) of `exploits/run_exploit.sh` with the `ctffarm_password`. This
 replaced the old interactive `gen_env.py`. When adding a key, update
 `env.json.example`; when adding a secret, add it to `SECRET_GENERATORS` in
@@ -116,7 +118,7 @@ sudo bash hosts.sh <vulnbox_ip> <nop_ip>   # adds `vulnbox` alias to /etc/hosts
 Deploy (first run uses the *initial* VM password):
 ```sh
 .venv/bin/python deploy_parallel.py --vulnbox-password <initial_pw> \
-  --modules common kickstarterpy s4dfarm packmate dashboard
+  --modules common kickstarterpy s4dfarm tulip dashboard
 ```
 
 Redeploy a single module (use the *new* root password from .env.json):
@@ -179,3 +181,6 @@ and copy them in `ansible/tasks/threesome.yml`. Full reference: `docs/threesome.
   apt repo — set it to match the actual vulnbox Ubuntu release.
 - Comments and CLI help in `deploy_parallel.py` are in Italian; keep that style
   when editing that file.
+- Tulip has no built-in web auth — prefer an nginx reverse proxy or VPN
+  (wisscon) for access control. Tulip frontend port defaults to `65002`
+  (set `tulip_frontend_port` in the playbook vars to change).

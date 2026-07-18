@@ -96,7 +96,8 @@ Leave the **secret** fields (`root_password`, `packmate_password`,
 `ctffarm_password`, `flag_dashboard_key`, `flag_dashboard_password`) blank:
 `deploy_parallel.py` auto-generates any missing secret on first run, writes it
 back into `.env.json` (mode 0600), and patches the `--server-pass` line of
-`exploits/run_exploit.sh` with the generated `ctffarm_password`.
+`exploits/run_exploit.sh` with the generated `ctffarm_password`. `tick_start`
+is also auto-generated with the current UTC time if left empty.
 
 > **Note:** `.env.json` is gitignored and holds all secrets. Keep it safe and never commit it.
 
@@ -107,7 +108,7 @@ Run all modules in the correct order (common → parallel → kickstarterpy):
 ```sh
 .venv/bin/python deploy_parallel.py \
   --vulnbox-password **** \
-  --modules common kickstarterpy s4dfarm packmate dashboard
+  --modules common kickstarterpy s4dfarm tulip dashboard
 ```
 
 To deploy only specific modules (e.g., after a partial failure or to redeploy a single tool):
@@ -116,7 +117,7 @@ To deploy only specific modules (e.g., after a partial failure or to redeploy a 
 # After common has already run, use the NEW root password from .env.json
 .venv/bin/python deploy_parallel.py \
   --vulnbox-password $(.venv/bin/python -c "import json; print(json.load(open('.env.json'))['root_password'])") \
-  --modules packmate dashboard
+  --modules tulip dashboard
 ```
 
 > **Important:** `common` changes the root password to the generated `root_password` in `.env.json`. All subsequent deploys must use that new password, not the original VM password.
@@ -223,6 +224,7 @@ Pass `--no-restart` to `apply`/`rollback` to skip the docker rebuild. Connection
 | `common` | — | — | Installs Docker, adds SSH keys, changes root password |
 | `s4dfarm` | S4DFarm | `127.0.0.1:42069` | Flag submission farm (web UI + celery workers) |
 | `packmate` | Packmate | `65000` | Traffic capture and analysis (pcap viewer) |
+| `tulip` | Tulip | `65002` | Pcap flow analysis, flag extraction, and codegen (HTTP/TLS/WebSocket support) |
 | `kickstarterpy` | KickStarterPy | — | Automates pushing flag patterns to Packmate |
 | `dashboard` | flag_dashboard | — | Unified web dashboard aggregating s4dfarm + packmate |
 | `wisscon` | wisscon + WireGuard | — | Site-to-site VPN between vulnbox and exploit VM |
@@ -237,4 +239,5 @@ Pass `--no-restart` to `apply`/`rollback` to skip the docker rebuild. Connection
 |---|---|---|
 | S4DFarm | `http://<vulnbox_ip>:42069` | password: `ctffarm_password` in `.env.json` |
 | Packmate | `http://<vulnbox_ip>:65000` | login: `unimore` / password: `packmate_password` in `.env.json` |
+| Tulip | `http://<vulnbox_ip>:65002` | — (no built-in auth; use VPN or reverse proxy) |
 | flag_dashboard | `http://<vulnbox_ip>` (default Flask port) | password: `flag_dashboard_password` in `.env.json` |

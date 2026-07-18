@@ -1,0 +1,52 @@
+- name: download tulip
+  ansible.builtin.git:
+    repo: 'https://github.com/OpenAttackDefenseTools/tulip.git'
+    dest: '/root/tulip'
+    force: yes
+    recursive: yes
+    version: "523e5179043a5b6ae1bbcc1990d774f23166319b"
+
+- name: copy template tulip docker-compose
+  copy:
+    src: ./configs/docker-compose.tulip.yml
+    dest: /root/tulip/docker-compose.yml
+
+- name: install Tulip configuration
+  copy:
+    src: ./configs/tulip.template.env
+    dest: /root/tulip/.env
+
+- name: add tulip vm ip
+  ansible.builtin.lineinfile:
+    path: /root/tulip/.env
+    search_string: "VM_IP="
+    line: "VM_IP={{ vulnbox_ip }}"
+
+- name: add tulip tick start
+  ansible.builtin.lineinfile:
+    path: /root/tulip/.env
+    search_string: "TICK_START="
+    line: "TICK_START={{ tick_start }}"
+
+- name: add tulip tick length
+  ansible.builtin.lineinfile:
+    path: /root/tulip/.env
+    search_string: "TICK_LENGTH="
+    line: "TICK_LENGTH={{ tick_length }}"
+
+- name: add tulip flag regex
+  ansible.builtin.lineinfile:
+    path: /root/tulip/.env
+    search_string: "FLAG_REGEX="
+    line: "FLAG_REGEX={{ flag_regex }}"
+
+- name: add tulip frontend port
+  ansible.builtin.lineinfile:
+    path: /root/tulip/.env
+    search_string: "TULIP_FRONTEND_PORT="
+    line: "TULIP_FRONTEND_PORT={{ tulip_frontend_port }}"
+
+- name: run tulip
+  community.docker.docker_compose_v2:
+    project_src: '/root/tulip'
+    build: 'always'
